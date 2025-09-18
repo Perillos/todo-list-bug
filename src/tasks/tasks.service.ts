@@ -1,7 +1,10 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Task } from '../entities/task.entity';
 import { Repository } from 'typeorm';
+
+import { Task } from '../entities/task.entity';
+import { User } from '../entities/user.entity';
+import { EditTaskDto } from './dto/edit-task.dto';
 
 @Injectable()
 export class TasksService {
@@ -33,13 +36,17 @@ export class TasksService {
         return task;
     }
 
-    async editTask(taskData: any, userId: string) {
+    async editTask(taskData: EditTaskDto, userId: User['id']) {
+        const { id, ...updatable } = taskData;
         const task = await this.tasksRepository
             .createQueryBuilder()
             .update(Task)
-            .set(taskData)
-            .where('ownerId = :userId', { userId }) // Usa el nombre real de la columna en la base de datos
-            .andWhere('id = :id', { id: taskData.id }) // Usa el nombre real de la columna
+            .set({
+                ...updatable,
+                id: () => 'id',
+            })
+            .where('ownerId = :userId', { userId })
+            .andWhere('id = :id', { id })
             .execute();
 
         if (task.affected === 0) {
@@ -48,6 +55,6 @@ export class TasksService {
             ]);
         }
 
-        return { ...taskData, id: taskData.id };
+        return { id, ...updatable };
     }
 }
